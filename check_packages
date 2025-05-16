@@ -1,0 +1,45 @@
+import os
+import re
+
+def load_requirements(requirements_path):
+    with open(requirements_path, 'r') as f:
+        return [line.strip().split('==')[0].split('>=')[0].split('<=')[0] for line in f if line.strip() and not line.startswith('#')]
+
+def find_python_files(root_dir):
+    py_files = []
+    for dirpath, _, filenames in os.walk(root_dir):
+        for file in filenames:
+            if file.endswith('.py'):
+                py_files.append(os.path.join(dirpath, file))
+    return py_files
+
+def check_imports_in_files(packages, files):
+    usage_map = {pkg: [] for pkg in packages}
+    for file_path in files:
+        try:
+            with open(file_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+                for pkg in packages:
+                    pattern = rf'(^|\n)\s*(import|from)\s+{re.escape(pkg)}\b'
+                    if re.search(pattern, content):
+                        usage_map[pkg].append(file_path)
+        except Exception as e:
+            print(f"Error reading {file_path}: {e}")
+    return usage_map
+
+def main():
+    requirements_path = 'requirements.txt'  # adjust if path is different
+    project_root = '.'  # current directory or set to your project path
+
+    packages = load_requirements(requirements_path)
+    py_files = find_python_files(project_root)
+    usage_map = check_imports_in_files(packages, py_files)
+
+    for pkg, files in usage_map.items():
+        if files:
+            print(f"\nPackage '{pkg}' is used in:")
+            for f in files:
+                print(f"  - {f}")
+
+if __name__ == '__main__':
+    main()
